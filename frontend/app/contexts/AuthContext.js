@@ -21,6 +21,38 @@ export function AuthProvider({ children }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Demo accounts - only for admin/officer
+  const demoAccounts = {
+    'admin@ub.ac.bw': {
+      password: 'admin123',
+      userData: {
+        uid: 'demo-admin-001',
+        email: 'admin@ub.ac.bw',
+        fullName: 'System Administrator',
+        role: 'admin',
+        studentId: '202400001',
+        isActive: true,
+        emailVerified: true,
+        createdAt: new Date(),
+        isDemo: true
+      }
+    },
+    'officer@ub.ac.bw': {
+      password: 'officer123', 
+      userData: {
+        uid: 'demo-officer-001',
+        email: 'officer@ub.ac.bw',
+        fullName: 'Election Officer',
+        role: 'officer',
+        studentId: '202400002',
+        isActive: true,
+        emailVerified: true,
+        createdAt: new Date(),
+        isDemo: true
+      }
+    }
+  };
+
   // Strong Password Validation
   const validatePassword = (password) => {
     const requirements = {
@@ -199,6 +231,24 @@ export function AuthProvider({ children }) {
     }
 
     try {
+      // Check if it's a demo account first
+      const demoAccount = demoAccounts[email];
+      if (demoAccount && demoAccount.password === password) {
+        // Demo account login - set user data directly
+        setCurrentUser(demoAccount.userData);
+        setUserData(demoAccount.userData);
+        
+        // Store in localStorage for persistence
+        localStorage.setItem('currentUser', JSON.stringify(demoAccount.userData));
+        localStorage.setItem('userData', JSON.stringify(demoAccount.userData));
+        
+        // Reset attempts on success
+        delete loginAttempts[attemptKey];
+        
+        return { user: demoAccount.userData };
+      }
+
+      // Regular Firebase login for students
       const result = await signInWithEmailAndPassword(auth, email, password);
       
       // Check if email is verified - DON'T logout, just throw error
@@ -231,6 +281,11 @@ export function AuthProvider({ children }) {
   // Voting system
   async function castVote(electionId, candidateId) {
     if (!currentUser) throw new Error('Not authenticated');
+    
+    // Demo users cannot vote
+    if (currentUser.isDemo) {
+      throw new Error('Demo accounts cannot vote in elections');
+    }
     
     const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
     const userData = userDoc.data();
@@ -275,6 +330,11 @@ export function AuthProvider({ children }) {
   async function canVote(electionId) {
     if (!currentUser) return false;
     
+    // Demo users cannot vote
+    if (currentUser.isDemo) {
+      return false;
+    }
+    
     const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
     const userData = userDoc.data();
     
@@ -284,7 +344,10 @@ export function AuthProvider({ children }) {
 
   // Logout
   function logout() {
+    setCurrentUser(null);
     setUserData(null);
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('userData');
     return signOut(auth);
   }
 
@@ -316,8 +379,21 @@ export function AuthProvider({ children }) {
           await logout();
         }
       } else {
-        setCurrentUser(null);
-        setUserData(null);
+        // Check for demo user in localStorage
+        const storedUser = localStorage.getItem('currentUser');
+        if (storedUser) {
+          const demoUser = JSON.parse(storedUser);
+          if (demoUser.isDemo) {
+            setCurrentUser(demoUser);
+            setUserData(demoUser);
+          } else {
+            setCurrentUser(null);
+            setUserData(null);
+          }
+        } else {
+          setCurrentUser(null);
+          setUserData(null);
+        }
       }
       setLoading(false);
     });

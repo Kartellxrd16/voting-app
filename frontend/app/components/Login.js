@@ -25,12 +25,26 @@ export default function Login() {
     setLoading(true);
 
     try {
-      await login(email, password);
-      setNotification({ type: 'success', message: 'Login successful! Redirecting...' });
+      const result = await login(email, password);
       
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1500);
+      // Check if it's a demo admin/officer account
+      if (result.user && result.user.isDemo) {
+        setNotification({ 
+          type: 'success', 
+          message: `Demo ${result.user.role} login successful! Redirecting...` 
+        });
+        
+        setTimeout(() => {
+          router.push('/admin');
+        }, 1500);
+      } else {
+        // Regular student login
+        setNotification({ type: 'success', message: 'Login successful! Redirecting...' });
+        
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 1500);
+      }
     } catch (error) {
       console.error('Login error:', error);
       
@@ -87,8 +101,17 @@ export default function Login() {
         </div>
 
         <h2 className="text-2xl md:text-3xl font-extrabold text-center text-gray-900 mb-6">
-          Student Login
+          Login
         </h2>
+
+        {/* Demo Credentials Hint */}
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h3 className="text-sm font-semibold text-blue-800 mb-2">Demo Access:</h3>
+          <div className="text-xs text-blue-700 space-y-1">
+            <p><strong>Admin:</strong> admin@ub.ac.bw / admin123</p>
+            <p><strong>Officer:</strong> officer@ub.ac.bw / officer123</p>
+          </div>
+        </div>
 
         <form onSubmit={handleLogin} className="space-y-5">
           {/* Email */}
@@ -97,7 +120,7 @@ export default function Login() {
             <input
               type="email"
               className="w-full py-3 pl-12 pr-4 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-[#00A693] bg-white placeholder-gray-500 text-gray-900 font-medium"
-              placeholder="Your UB email (e.g., 202207201@ub.ac.bw)"
+              placeholder="Your email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required

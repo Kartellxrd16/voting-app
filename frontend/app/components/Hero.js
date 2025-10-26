@@ -13,7 +13,7 @@ export default function Hero() {
           A secure, transparent, and accessible online voting platform for your community.
         </p>
         <Link
-          href="/register"
+          href="/auth/register"
           className="px-8 py-4 bg-white text-[#006666] rounded-full font-bold shadow-xl hover:shadow-2xl hover:bg-gray-100 transition-all duration-300 transform hover:-translate-y-1"
         >
           Get Started Today
